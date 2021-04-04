@@ -1,7 +1,125 @@
-import Head from 'next/head'
-import styles from '../styles/Home.module.css'
+import Head from "next/head";
+import { forwardRef, useEffect, useReducer, useRef } from "react";
+import styles from "../styles/Home.module.css";
+import draw from "canvas-free-drawing";
+import loader from "@assemblyscript/loader";
+import wasmSrc from "../build/untouched.wasm";
 
-export default function Home() {
+const DA4 = forwardRef(({ id, disabled }, ref) => {
+  const cfdRef = useRef();
+
+  useEffect(() => {
+    const cfd = new draw({
+      elementId: id,
+      width: 595,
+      height: 842,
+    });
+    cfdRef.current = cfd;
+    ref.current = cfd.context;
+
+    cfd.setLineWidth(5);
+    return () => {
+      cfd.toggleDrawingMode();
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (disabled === cfdRef.current.isDrawingModeEnabled) {
+      cfdRef.current.toggleDrawingMode();
+      console.log("toggleDrawingMode");
+    }
+
+    if (!disabled) cfdRef.current.clear();
+  }, [disabled]);
+
+  return <canvas id={id} className={styles.canvas} />;
+});
+
+const getCrop = async (imageData) => {
+  const { data, width, height } = imageData;
+  const byteSize = width * height * 4;
+
+  const memory = new WebAssembly.Memory({
+    initial: ((byteSize + 0xffff) & ~0xffff) >>> 16,
+  });
+
+  const mem = new Uint8ClampedArray(memory.buffer);
+  mem.set(data);
+
+  const wasm = await loader.instantiate(fetch(wasmSrc), {
+    env: {
+      memory,
+    },
+  });
+
+  const resultPtr = wasm.exports.crop(width, height);
+
+  const [top, right, bottom, left] = wasm.exports.__getUint32Array(resultPtr);
+
+  return {
+    top,
+    right,
+    bottom,
+    left,
+  };
+};
+
+const SIZE = 1;
+
+export default function Home({ id }) {
+  const [mode, toggle] = useReducer((v) => !v);
+  const ctxRef = useRef();
+
+  useEffect(() => {
+    (async () => {
+      if (mode) {
+        const start = Date.now();
+        const ctx = ctxRef.current;
+
+        const tempCanvas = document.createElement("canvas");
+        const tempCtx = tempCanvas.getContext("2d");
+
+        tempCanvas.width = ctx.canvas.width / SIZE;
+        tempCanvas.height = ctx.canvas.height / SIZE;
+
+        tempCtx.drawImage(
+          ctx.canvas,
+          0,
+          0,
+          tempCanvas.width,
+          tempCanvas.height
+        );
+
+        const imageData = tempCtx.getImageData(
+          0,
+          0,
+          tempCanvas.width,
+          tempCanvas.height
+        );
+
+        const { top, right, bottom, left } = await getCrop(imageData);
+
+        console.log({
+          top,
+          right,
+          bottom,
+          left,
+        });
+
+        ctx.strokeStyle = "green";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(
+          left * SIZE,
+          top * SIZE,
+          (right - left) * SIZE,
+          (bottom - top) * SIZE
+        );
+
+        console.log(`Time: ${(Date.now() - start) / 1000} sec`);
+      }
+    })();
+  }, [mode]);
+
   return (
     <div className={styles.container}>
       <Head>
@@ -10,56 +128,18 @@ export default function Home() {
       </Head>
 
       <main className={styles.main}>
-        <h1 className={styles.title}>
-          Welcome to <a href="https://nextjs.org">Next.js!</a>
-        </h1>
+        <button className={styles.button} onClick={toggle}>
+          {mode ? "draw" : "crop"}
+        </button>
 
-        <p className={styles.description}>
-          Get started by editing{' '}
-          <code className={styles.code}>pages/index.js</code>
-        </p>
-
-        <div className={styles.grid}>
-          <a href="https://nextjs.org/docs" className={styles.card}>
-            <h3>Documentation &rarr;</h3>
-            <p>Find in-depth information about Next.js features and API.</p>
-          </a>
-
-          <a href="https://nextjs.org/learn" className={styles.card}>
-            <h3>Learn &rarr;</h3>
-            <p>Learn about Next.js in an interactive course with quizzes!</p>
-          </a>
-
-          <a
-            href="https://github.com/vercel/next.js/tree/master/examples"
-            className={styles.card}
-          >
-            <h3>Examples &rarr;</h3>
-            <p>Discover and deploy boilerplate example Next.js projects.</p>
-          </a>
-
-          <a
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-            className={styles.card}
-          >
-            <h3>Deploy &rarr;</h3>
-            <p>
-              Instantly deploy your Next.js site to a public URL with Vercel.
-            </p>
-          </a>
-        </div>
+        <DA4 id={id} ref={ctxRef} disabled={mode} />
       </main>
-
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com?utm_source=create-next-app&utm_medium=default-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Powered by{' '}
-          <img src="/vercel.svg" alt="Vercel Logo" className={styles.logo} />
-        </a>
-      </footer>
     </div>
-  )
+  );
 }
+
+export const getStaticProps = () => ({
+  props: {
+    id: `canvas${Math.random()}`,
+  },
+});

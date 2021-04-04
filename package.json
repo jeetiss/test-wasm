@@ -5,11 +5,21 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "asbuild:untouched": "asc assembly/index.ts --target debug",
+    "asbuild:optimized": "asc assembly/index.ts --target release",
+    "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized",
+    "test": "node tests"
   },
   "dependencies": {
+    "@assemblyscript/loader": "^0.18.21",
+    "canvas-free-drawing": "^2.1.0",
     "next": "10.1.2",
     "react": "17.0.2",
     "react-dom": "17.0.2"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.18.21",
+    "file-loader": "^6.2.0"
   }
 }
