@@ -3,12 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "nodemon -e ts --watch assembly --exec npm run asbuild:untouched & next dev",
+    "build": "npm run asbuild:optimized && next build",
     "start": "next start",
     "asbuild:untouched": "asc assembly/index.ts --target debug",
     "asbuild:optimized": "asc assembly/index.ts --target release",
-    "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized",
     "test": "node tests"
   },
   "dependencies": {
@@ -20,6 +19,7 @@
   },
   "devDependencies": {
     "assemblyscript": "^0.18.21",
-    "file-loader": "^6.2.0"
+    "file-loader": "^6.2.0",
+    "nodemon": "^2.0.7"
   }
 }

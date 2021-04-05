@@ -1,13 +1,13 @@
 {
   "targets": {
     "debug": {
-      "binaryFile": "build/untouched.wasm",
+      "binaryFile": "build/code.wasm",
       "importMemory": true,
       "memoryBase": 2003960,
       "debug": true
     },
     "release": {
-      "binaryFile": "build/optimized.wasm",
+      "binaryFile": "build/code.wasm",
       "importMemory": true,
       "memoryBase": 2003960,
       "optimizeLevel": 3,

@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useReducer, useRef } from "react";
 import styles from "../styles/Home.module.css";
 import draw from "canvas-free-drawing";
 import loader from "@assemblyscript/loader";
-import wasmSrc from "../build/untouched.wasm";
+import wasmSrc from "../build/code.wasm";
 
 const DA4 = forwardRef(({ id, disabled }, ref) => {
   const cfdRef = useRef();
