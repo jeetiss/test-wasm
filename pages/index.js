@@ -26,7 +26,6 @@ const DA4 = forwardRef(({ id, disabled }, ref) => {
   useEffect(() => {
     if (disabled === cfdRef.current.isDrawingModeEnabled) {
       cfdRef.current.toggleDrawingMode();
-      console.log("toggleDrawingMode");
     }
 
     if (!disabled) cfdRef.current.clear();
@@ -35,23 +34,23 @@ const DA4 = forwardRef(({ id, disabled }, ref) => {
   return <canvas id={id} className={styles.canvas} />;
 });
 
+const byteSize = 2000 * 2000 * 4;
+const memory = new WebAssembly.Memory({
+  initial: ((byteSize + 0xffff) & ~0xffff) >>> 16,
+});
+
+const wasmPromise = loader.instantiate(fetch(wasmSrc), {
+  env: {
+    memory,
+  },
+});
+
 const getCrop = async (imageData) => {
   const { data, width, height } = imageData;
-  const byteSize = width * height * 4;
-
-  const memory = new WebAssembly.Memory({
-    initial: ((byteSize + 0xffff) & ~0xffff) >>> 16,
-  });
+  const wasm = await wasmPromise;
 
   const mem = new Uint8ClampedArray(memory.buffer);
   mem.set(data);
-
-  const wasm = await loader.instantiate(fetch(wasmSrc), {
-    env: {
-      memory,
-    },
-  });
-
   const resultPtr = wasm.exports.crop(width, height);
 
   const [top, right, bottom, left] = wasm.exports.__getUint32Array(resultPtr);
@@ -64,8 +63,6 @@ const getCrop = async (imageData) => {
   };
 };
 
-const SIZE = 1;
-
 export default function Home({ id }) {
   const [mode, toggle] = useReducer((v) => !v);
   const ctxRef = useRef();
@@ -76,28 +73,16 @@ export default function Home({ id }) {
         const start = Date.now();
         const ctx = ctxRef.current;
 
-        const tempCanvas = document.createElement("canvas");
-        const tempCtx = tempCanvas.getContext("2d");
-
-        tempCanvas.width = ctx.canvas.width / SIZE;
-        tempCanvas.height = ctx.canvas.height / SIZE;
-
-        tempCtx.drawImage(
-          ctx.canvas,
+        const imageData = ctx.getImageData(
           0,
           0,
-          tempCanvas.width,
-          tempCanvas.height
-        );
-
-        const imageData = tempCtx.getImageData(
-          0,
-          0,
-          tempCanvas.width,
-          tempCanvas.height
+          ctx.canvas.width,
+          ctx.canvas.height
         );
 
         const { top, right, bottom, left } = await getCrop(imageData);
+
+        console.log(`Time: ${Date.now() - start} ms`);
 
         console.log({
           top,
@@ -108,14 +93,7 @@ export default function Home({ id }) {
 
         ctx.strokeStyle = "green";
         ctx.lineWidth = 1;
-        ctx.strokeRect(
-          left * SIZE,
-          top * SIZE,
-          (right - left) * SIZE,
-          (bottom - top) * SIZE
-        );
-
-        console.log(`Time: ${(Date.now() - start) / 1000} sec`);
+        ctx.strokeRect(left, top, right - left, bottom - top);
       }
     })();
   }, [mode]);
