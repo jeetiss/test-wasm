@@ -16,9 +16,28 @@
   align-items: center;
 }
 
-.canvas {
+.relative {
   border: 1px solid #e2e2e2;
   box-shadow: 0px 5px 20px 5px rgb(0 0 0 / 20%);
+
+  position: relative;
+
+  overflow: hidden;
+}
+
+.canvas {
+  display: block;
+}
+
+.border {
+  position: absolute;
+  border: 1px solid red;
+
+  top: -100px;
+  width: 0;
+  height: 0;
+
+  pointer-events: none;
 }
 
 .button {

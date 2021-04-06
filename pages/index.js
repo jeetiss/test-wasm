@@ -1,12 +1,27 @@
 import Head from "next/head";
-import { forwardRef, useEffect, useReducer, useRef } from "react";
+import { forwardRef, useEffect, useRef, useCallback } from "react";
 import styles from "../styles/Home.module.css";
 import draw from "canvas-free-drawing";
 import loader from "@assemblyscript/loader";
 import wasmSrc from "../build/code.wasm";
 
-const DA4 = forwardRef(({ id, disabled }, ref) => {
+const useUpdatedRef = (value) => {
+  const ref = useRef(value);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref;
+};
+
+const useEventCallback = (callback) => {
+  const ref = useUpdatedRef(callback);
+  return useCallback((arg) => ref.current && ref.current(arg), []);
+};
+
+const DA4 = forwardRef(({ id, crop }, ref) => {
   const cfdRef = useRef();
+  const canvasRef = useRef();
+  const cropCallback = useEventCallback(crop);
 
   useEffect(() => {
     const cfd = new draw({
@@ -18,20 +33,18 @@ const DA4 = forwardRef(({ id, disabled }, ref) => {
     ref.current = cfd.context;
 
     cfd.setLineWidth(5);
+
+    canvasRef.current.addEventListener("cfd_mouseleave", cropCallback);
+    canvasRef.current.addEventListener("cfd_mouseup", cropCallback);
+
     return () => {
+      canvasRef.current.removeEventListener("cfd_mouseleave", cropCallback);
+      canvasRef.current.removeEventListener("cfd_mouseup", cropCallback);
       cfd.toggleDrawingMode();
     };
   }, [id]);
 
-  useEffect(() => {
-    if (disabled === cfdRef.current.isDrawingModeEnabled) {
-      cfdRef.current.toggleDrawingMode();
-    }
-
-    if (!disabled) cfdRef.current.clear();
-  }, [disabled]);
-
-  return <canvas id={id} className={styles.canvas} />;
+  return <canvas id={id} className={styles.canvas} ref={canvasRef} />;
 });
 
 const byteSize = 2000 * 2000 * 4;
@@ -64,39 +77,38 @@ const getCrop = async (imageData) => {
 };
 
 export default function Home({ id }) {
-  const [mode, toggle] = useReducer((v) => !v);
   const ctxRef = useRef();
+  const borderRef = useRef();
 
-  useEffect(() => {
-    (async () => {
-      if (mode) {
-        const start = Date.now();
-        const ctx = ctxRef.current;
+  const crop = useCallback(async () => {
+    const start = Date.now();
+    const ctx = ctxRef.current;
 
-        const imageData = ctx.getImageData(
-          0,
-          0,
-          ctx.canvas.width,
-          ctx.canvas.height
-        );
+    const imageData = ctx.getImageData(
+      0,
+      0,
+      ctx.canvas.width,
+      ctx.canvas.height
+    );
 
-        const { top, right, bottom, left } = await getCrop(imageData);
+    const { top, right, bottom, left } = await getCrop(imageData);
 
-        console.log(`Time: ${Date.now() - start} ms`);
+    console.log(`Time: ${Date.now() - start} ms`);
 
-        console.log({
-          top,
-          right,
-          bottom,
-          left,
-        });
+    console.log({
+      top,
+      right,
+      bottom,
+      left,
+    });
 
-        ctx.strokeStyle = "green";
-        ctx.lineWidth = 1;
-        ctx.strokeRect(left, top, right - left, bottom - top);
-      }
-    })();
-  }, [mode]);
+    const border = borderRef.current;
+
+    border.style.top = `${top}px`;
+    border.style.left = `${left}px`;
+    border.style.width = `${right - left + 1}px`;
+    border.style.height = `${bottom - top + 1}px`;
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -106,11 +118,31 @@ export default function Home({ id }) {
       </Head>
 
       <main className={styles.main}>
-        <button className={styles.button} onClick={toggle}>
-          {mode ? "draw" : "crop"}
+        <button
+          className={styles.button}
+          onClick={() => {
+            ctxRef.current.fillStyle = "white";
+            ctxRef.current.fillRect(
+              0,
+              0,
+              ctxRef.current.canvas.width,
+              ctxRef.current.canvas.height
+            );
+
+            const border = borderRef.current;
+            border.style.top = "";
+            border.style.left = "";
+            border.style.width = "";
+            border.style.height = "";
+          }}
+        >
+          {"clear"}
         </button>
 
-        <DA4 id={id} ref={ctxRef} disabled={mode} />
+        <div className={styles.relative}>
+          <DA4 id={id} ref={ctxRef} crop={crop} />
+          <div ref={borderRef} className={styles.border} />
+        </div>
       </main>
     </div>
   );
