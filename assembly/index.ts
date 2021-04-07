@@ -1,6 +1,6 @@
 // The entry file of your WebAssembly module.
 
-export function crop(width: u32, height: u32): Array<u32> {
+export function crop(arr: Uint8ClampedArray, width: u32, height: u32): Array<u32> {
   const result: Array<u32> = new Array<u32>(4);
 
   // top
@@ -17,9 +17,9 @@ export function crop(width: u32, height: u32): Array<u32> {
       const pos: u32 = (y * width + x) * 4;
 
       if (
-        load<u8>(pos) !== 255 ||
-        load<u8>(pos + 1) !== 255 ||
-        load<u8>(pos + 2) !== 255
+        arr[pos] !== 255 ||
+        arr[pos + 1] !== 255 ||
+        arr[pos + 2] !== 255
       ) {
         // top
         result[0] = min(result[0], y);
@@ -35,3 +35,5 @@ export function crop(width: u32, height: u32): Array<u32> {
 
   return result;
 }
+
+export const dataId = idof<Uint8ClampedArray>()

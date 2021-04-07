@@ -47,26 +47,19 @@ const DA4 = forwardRef(({ id, crop }, ref) => {
   return <canvas id={id} className={styles.canvas} ref={canvasRef} />;
 });
 
-const byteSize = 2000 * 2000 * 4;
-const memory = new WebAssembly.Memory({
-  initial: ((byteSize + 0xffff) & ~0xffff) >>> 16,
-});
-
-const wasmPromise = loader.instantiate(fetch(wasmSrc), {
-  env: {
-    memory,
-  },
-});
+const wasmPromise =
+  typeof window !== "undefined" ? loader.instantiate(fetch(wasmSrc)) : null;
 
 const getCrop = async (imageData) => {
   const { data, width, height } = imageData;
   const wasm = await wasmPromise;
 
-  const mem = new Uint8ClampedArray(memory.buffer);
-  mem.set(data);
-  const resultPtr = wasm.exports.crop(width, height);
+  const { crop, dataId } = wasm.exports;
+  const { __newArray, __getUint32Array } = wasm.exports;
 
-  const [top, right, bottom, left] = wasm.exports.__getUint32Array(resultPtr);
+  const [top, right, bottom, left] = __getUint32Array(
+    crop(__newArray(dataId, data), width, height)
+  );
 
   return {
     top,
