@@ -55,9 +55,9 @@ const getCrop = async (imageData) => {
   const wasm = await wasmPromise;
 
   const { crop, arrayPtr } = wasm.exports;
-  const { __newArray, __getUint32Array } = wasm.exports;
+  const { __newArray, __getArray } = wasm.exports;
 
-  const [top, right, bottom, left] = __getUint32Array(
+  const [top, right, bottom, left] = __getArray(
     crop(__newArray(arrayPtr, data), width, height)
   );
 
