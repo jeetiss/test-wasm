@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "nodemon -e ts --watch assembly --exec npm run asbuild:untouched & next dev",
-    "build": "npm run asbuild:optimized && next build",
+    "build": "npm run asbuild:optimized && next build && next export",
     "start": "next start",
     "asbuild:untouched": "asc assembly/index.ts --target debug",
     "asbuild:optimized": "asc assembly/index.ts --target release",
-    "test": "node tests"
+    "test": "node tests",
+    "deploy": "npm run build && gh-pages -d out"
   },
   "dependencies": {
     "@assemblyscript/loader": "^0.18.21",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "assemblyscript": "^0.18.21",
     "file-loader": "^6.2.0",
+    "gh-pages": "^3.1.0",
     "nodemon": "^2.0.7"
   }
 }

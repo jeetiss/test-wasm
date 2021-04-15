@@ -1,6 +1,8 @@
 module.exports = {
+  basePath: "/test-wasm",
+  assetPrefix: "//raw.githubusercontent.com/jeetiss/test-wasm/gh-pages/",
   future: {
-    webpack5: true
+    webpack5: true,
   },
   webpack: (config) => {
     config.module.rules.unshift({
@@ -11,12 +13,12 @@ module.exports = {
           options: {
             name: "[contenthash].[ext]",
             publicPath: "_next/static/wasm",
-            outputPath: "static/wasm"
-          }
-        }
-      ]
+            outputPath: "static/wasm",
+          },
+        },
+      ],
     });
 
     return config;
-  }
+  },
 };
